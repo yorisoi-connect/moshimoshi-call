@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ------------------------------------------------------------------
-     6. 利用者の声：カルーセル
+     6. 利用者の声：カルーセル（ページ単位スナップ）
      ------------------------------------------------------------------ */
   (function () {
     var wrap = document.querySelector('.voice-carousel-wrap');
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var prevBtn = wrap.querySelector('.carousel-btn-prev');
     var nextBtn = wrap.querySelector('.carousel-btn-next');
     var dotsWrap = document.querySelector('.carousel-dots');
-    var currentIndex = 0;
+    var currentPage = 0;
 
     function getSlidesPerView() {
       if (window.innerWidth < 480) return 1;
@@ -152,8 +152,8 @@ document.addEventListener('DOMContentLoaded', function () {
       return 3;
     }
 
-    function getMaxIndex() {
-      return Math.max(0, slides.length - getSlidesPerView());
+    function getPageCount() {
+      return Math.ceil(slides.length / getSlidesPerView());
     }
 
     function updateSlideWidths() {
@@ -166,12 +166,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function buildDots() {
       if (!dotsWrap) return;
       dotsWrap.innerHTML = '';
-      var max = getMaxIndex();
-      if (max === 0) return;
-      for (var i = 0; i <= max; i++) {
+      var pages = getPageCount();
+      if (pages <= 1) return;
+      for (var i = 0; i < pages; i++) {
         var dot = document.createElement('button');
-        dot.className = 'carousel-dot' + (i === currentIndex ? ' is-active' : '');
-        dot.setAttribute('aria-label', (i + 1) + '枚目');
+        dot.className = 'carousel-dot' + (i === currentPage ? ' is-active' : '');
+        dot.setAttribute('aria-label', (i + 1) + 'ページ目');
         (function (idx) {
           dot.addEventListener('click', function () { goTo(idx); });
         })(i);
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateDots() {
       if (!dotsWrap) return;
       Array.from(dotsWrap.querySelectorAll('.carousel-dot')).forEach(function (dot, i) {
-        dot.classList.toggle('is-active', i === currentIndex);
+        dot.classList.toggle('is-active', i === currentPage);
       });
     }
 
@@ -193,8 +193,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateButtons() {
-      var max = getMaxIndex();
-      if (max === 0) {
+      var pages = getPageCount();
+      if (pages <= 1) {
         wrap.style.paddingLeft = '';
         wrap.style.paddingRight = '';
         if (prevBtn) prevBtn.style.display = 'none';
@@ -205,26 +205,25 @@ document.addEventListener('DOMContentLoaded', function () {
         wrap.style.paddingRight = pad;
         if (prevBtn) {
           prevBtn.style.display = 'flex';
-          prevBtn.disabled = currentIndex === 0;
+          prevBtn.disabled = currentPage === 0;
         }
         if (nextBtn) {
           nextBtn.style.display = 'flex';
-          nextBtn.disabled = currentIndex >= max;
+          nextBtn.disabled = currentPage >= pages - 1;
         }
       }
     }
 
-    function goTo(index) {
-      var max = getMaxIndex();
-      currentIndex = Math.max(0, Math.min(index, max));
-      var perView = getSlidesPerView();
-      track.style.transform = 'translateX(-' + (currentIndex * (100 / perView)) + '%)';
+    function goTo(page) {
+      var pages = getPageCount();
+      currentPage = Math.max(0, Math.min(page, pages - 1));
+      track.style.transform = 'translateX(-' + (currentPage * 100) + '%)';
       updateDots();
       updateButtons();
     }
 
-    if (prevBtn) prevBtn.addEventListener('click', function () { goTo(currentIndex - 1); });
-    if (nextBtn) nextBtn.addEventListener('click', function () { goTo(currentIndex + 1); });
+    if (prevBtn) prevBtn.addEventListener('click', function () { goTo(currentPage - 1); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { goTo(currentPage + 1); });
 
     // タッチスワイプ
     var touchStartX = 0;
@@ -233,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }, { passive: true });
     track.addEventListener('touchend', function (e) {
       var diff = touchStartX - e.changedTouches[0].clientX;
-      if (Math.abs(diff) > 40) goTo(currentIndex + (diff > 0 ? 1 : -1));
+      if (Math.abs(diff) > 40) goTo(currentPage + (diff > 0 ? 1 : -1));
     }, { passive: true });
 
     // ウィンドウリサイズ
@@ -243,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
       resizeTimer = setTimeout(function () {
         updateSlideWidths();
         buildDots();
-        goTo(Math.min(currentIndex, getMaxIndex()));
+        goTo(Math.min(currentPage, getPageCount() - 1));
       }, 200);
     });
 
